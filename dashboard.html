@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leyeco & QRpho Attendance Matcher Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Top Control Bar -->
+    <header>
+        <div class="brand-section">
+            <span class="brand-icon">🔄</span>
+            <div class="brand-title-group">
+                <h1>Attendance Matcher</h1>
+                <p>Compare Leyeco III & QRpho Logs</p>
+            </div>
+        </div>
+
+        <div class="controls-section">
+            <div class="url-inputs">
+                <!-- Leyeco III Input -->
+                <div class="input-wrapper">
+                    <label for="leyecoUrl">Leyeco III Payroll URL</label>
+                    <input type="text" id="leyecoUrl" class="url-input" placeholder="Enter Leyeco URL..." value="https://leyeco3-payroll.vercel.app/attendance/report">
+                    <div class="preset-buttons">
+                        <button class="preset-btn" id="leyecoPresetVercel">Vercel Portal</button>
+                        <button class="preset-btn" id="leyecoPresetNet">Leyeco3.net</button>
+                    </div>
+                </div>
+                
+                <!-- QRpho Input -->
+                <div class="input-wrapper">
+                    <label for="qrphoUrl">QRpho Tracking URL</label>
+                    <input type="text" id="qrphoUrl" class="url-input" placeholder="Enter QRpho URL..." value="https://qrpayroll-demo.qrpho.com/wp-admin/admin.php?page=attendance_report">
+                    <div class="preset-buttons">
+                        <button class="preset-btn" id="qrphoPresetDemo">Demo Portal</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compare Action Button & Extract Button -->
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button id="compareBtn" class="btn-compare">
+                    <span>Compare Logs</span> ⚡
+                </button>
+                <button id="extractBtn" class="btn-extract">
+                    <span>Extract Excel Data</span> 📋
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Split-Screen View -->
+    <div class="split-view-container" id="splitViewContainer">
+        <!-- Leyeco III Pane -->
+        <div class="pane" id="leyecoPane">
+            <div class="pane-header">
+                <span class="pane-title">
+                    <span class="pane-status" id="leyecoStatus"></span>
+                    Leyeco III Payroll System
+                </span>
+                <span style="font-size: 10px; color: var(--text-muted);">Frame Left</span>
+            </div>
+            <iframe id="leyecoFrame" src="https://leyeco3-payroll.vercel.app/attendance/report/view"></iframe>
+        </div>
+
+        <!-- QRpho Pane -->
+        <div class="pane" id="qrphoPane">
+            <div class="pane-header">
+                <span class="pane-title">
+                    <span class="pane-status" id="qrphoStatus"></span>
+                    QRpho WordPress Portal
+                </span>
+                <span style="font-size: 10px; color: var(--text-muted);">Frame Right</span>
+            </div>
+            <iframe id="qrphoFrame" src="https://qrpho-demo.qrpho.com/wp-admin/admin.php?page=qrpho_emp_attendance_report"></iframe>
+        </div>
+    </div>
+
+    <!-- Comparison Drawer -->
+    <div class="comparison-drawer" id="comparisonDrawer">
+        <!-- Toggle Bar -->
+        <div class="drawer-header" id="drawerHeader">
+            <span class="drawer-title">
+                📊 Attendance Comparison Report <span id="comparisonSummaryBadge" style="margin-left: 6px;"></span>
+            </span>
+            <div class="drawer-controls">
+                <button class="drawer-btn" id="btnToggleMin" title="Minimize/Restore Panel">➖</button>
+                <button class="drawer-btn" id="btnToggleMax" title="Maximize Panel">🔲</button>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="drawer-content" id="drawerContent">
+            <!-- Welcome View (Shown when no comparison has run yet) -->
+            <div class="comparison-welcome" id="comparisonWelcome">
+                <span class="welcome-icon">🔍</span>
+                <h3 class="welcome-title">Compare Attendance Logs</h3>
+                <p class="welcome-desc">Load individual employee attendance logs on both frames above, then click the <strong>"Compare Logs"</strong> button in the top right to start comparing timestamps and images.</p>
+            </div>
+
+            <!-- Dashboard Statistics (Initially Hidden) -->
+            <div class="summary-container" id="summaryContainer" style="display: none;">
+                <!-- Match Rate Card -->
+                <div class="summary-card">
+                    <span class="label">Match Consistency</span>
+                    <div class="value" id="statMatchRate">--%</div>
+                    <div class="indicator" id="statMatchRateDesc">No data processed</div>
+                </div>
+
+                <!-- Total Checked Card -->
+                <div class="summary-card">
+                    <span class="label">Total Days Checked</span>
+                    <div class="value" id="statTotalDays">0 <span>days</span></div>
+                    <div class="indicator" id="statTotalDaysDesc">Total overlapping dates</div>
+                </div>
+
+                <!-- Mismatches Card -->
+                <div class="summary-card">
+                    <span class="label">Time Mismatches</span>
+                    <div class="value" style="color: var(--warning);" id="statMismatches">0 <span>items</span></div>
+                    <div class="indicator" id="statMismatchesDesc" style="color: var(--warning);">Perfect sync</div>
+                </div>
+
+                <!-- Missing Records Card -->
+                <div class="summary-card">
+                    <span class="label">Missing Logs</span>
+                    <div class="value" style="color: var(--danger);" id="statMissing">0 <span>records</span></div>
+                    <div class="indicator" id="statMissingDesc" style="color: var(--danger);">No missing logs</div>
+                </div>
+            </div>
+
+            <!-- Comparison Output Table (Initially Hidden) -->
+            <div class="table-container" id="tableContainer" style="display: none;">
+                <table class="comparison-table" id="comparisonTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Leyeco III Records</th>
+                            <th>QRpho Records</th>
+                            <th>Status Match</th>
+                            <th>Photo Compare</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparisonTableBody">
+                        <!-- Comparative rows will be dynamically injected here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Collapsible Debug Output for checking cells -->
+            <details style="margin-top: 20px; font-size: 11px; background: rgba(0,0,0,0.25); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); display: none;" id="debugDetails">
+                <summary style="cursor: pointer; font-weight: 600; color: var(--text-secondary);">🛠️ Developer Debugging Panel (Scrape Diagnoses)</summary>
+                <pre id="debugOutput" style="margin-top: 10px; max-height: 250px; overflow: auto; color: #a7f3d0; font-family: monospace; white-space: pre-wrap; font-size: 10px; text-align: left;"></pre>
+            </details>
+        </div>
+    </div>
+
+    <!-- Photo Zoom Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal">
+        <div class="lightbox-content">
+            <button class="lightbox-close" id="lightboxCloseBtn" title="Close Verification Window">✕</button>
+            <div class="lightbox-header">
+                <h3 class="lightbox-title" id="lightboxTitle">Verify Photo Match</h3>
+                <p class="lightbox-subtitle" id="lightboxSubtitle">Compare snapshots side-by-side to verify the user identity</p>
+            </div>
+            
+            <div class="lightbox-photos-grid">
+                <!-- Leyeco Photo Card -->
+                <div class="lightbox-photo-card">
+                    <div class="lightbox-photo-title">Leyeco III Snapshot</div>
+                    <div class="lightbox-photo-frame">
+                        <img id="lightboxLeyecoImg" src="" alt="Leyeco III Image">
+                    </div>
+                    <div class="lightbox-photo-details">
+                        Time: <span class="lightbox-photo-time" id="lightboxLeyecoTime">--:--:--</span>
+                    </div>
+                </div>
+
+                <!-- QRpho Photo Card -->
+                <div class="lightbox-photo-card">
+                    <div class="lightbox-photo-title">QRpho Snapshot</div>
+                    <div class="lightbox-photo-frame">
+                        <img id="lightboxQrphoImg" src="" alt="QRpho Image">
+                    </div>
+                    <div class="lightbox-photo-details">
+                        Time: <span class="lightbox-photo-time" id="lightboxQrphoTime">--:--:--</span>
+                        <div id="lightboxQrphoCoords" style="margin-top: 4px; font-size: 10px; color: var(--text-secondary);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Excel Export Modal -->
+    <div class="lightbox-modal" id="extractModal">
+        <div class="lightbox-content" style="max-width: 900px;">
+            <button class="lightbox-close" id="extractCloseBtn" title="Close Window">✕</button>
+            <div class="lightbox-header">
+                <h3 class="lightbox-title">Extract Attendance Data (Excel Format)</h3>
+                <p class="lightbox-subtitle">Copy the text below and paste it directly into Excel. Columns will automatically align perfectly.</p>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <textarea id="extractTextarea" readonly style="width: 100%; height: 350px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; color: var(--text-main); font-family: monospace; font-size: 11px; white-space: pre; overflow: auto; resize: none; outline: none;"></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn-compare" id="btnCopyExtract" style="background: linear-gradient(135deg, var(--accent) 0%, #047857 100%); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
+                    Copy to Clipboard 📋
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Single Photo Zoom Modal -->
+    <div class="lightbox-modal" id="singlePhotoModal">
+        <div class="lightbox-content" style="max-width: 500px; text-align: center;">
+            <button class="lightbox-close" id="singlePhotoCloseBtn" title="Close Window">✕</button>
+            <div class="lightbox-header">
+                <h3 class="lightbox-title" id="singlePhotoTitle">Attendance Photo</h3>
+                <p class="lightbox-subtitle" id="singlePhotoSubtitle"></p>
+            </div>
+            <div class="lightbox-photo-frame" style="aspect-ratio: 1; max-height: 400px; background: rgba(0, 0, 0, 0.3); border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid var(--card-border);">
+                <img id="singlePhotoImg" src="" alt="Zoomed Photo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+            </div>
+            <div style="margin-top: 15px; font-size: 13px; color: var(--text-secondary);" id="singlePhotoDetails"></div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

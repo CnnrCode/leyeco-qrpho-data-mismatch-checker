@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.15);
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            width: 320px;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            box-sizing: border-box;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 16px;
+        }
+
+        .header-icon {
+            font-size: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: -4px;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            background: linear-gradient(to right, #ffffff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .feature-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background-color: var(--accent-glow);
+            color: var(--accent);
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .btn-launch {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13.5px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .btn-launch:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+            background: linear-gradient(135deg, #60a5fa 0%, var(--primary) 100%);
+        }
+
+        .btn-launch:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.25);
+        }
+
+        .footer {
+            font-size: 10.5px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            width: 100%;
+            padding-top: 12px;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-icon">🔄</div>
+        <h2>Attendance Matcher</h2>
+        <div class="feature-badge">
+            <span style="display:inline-block; width:6px; height:6px; background-color:var(--accent); border-radius:50%;"></span>
+            Ready to Compare
+        </div>
+        <p>Compare clock in/out times and employee photos between Leyeco III and QRpho side-by-side.</p>
+        
+        <button id="launchBtn" class="btn-launch">
+            Open Split-Screen Dashboard 🚀
+        </button>
+
+        <div class="footer">
+            Version 1.1 • Symphonics Co. Ltd
+        </div>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>

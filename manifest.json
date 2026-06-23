@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "Leyeco & QRpho Attendance Matcher",
+  "version": "1.0",
+  "description": "Scrapes and compares employee attendance logs side-by-side between Leyeco III and QRpho.",
+  "permissions": [
+    "declarativeNetRequest",
+    "scripting",
+    "storage",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "leyeco3.png",
+      "32": "leyeco3.png",
+      "48": "leyeco3.png",
+      "128": "leyeco3.png"
+    }
+  },
+  "icons": {
+    "16": "leyeco3.png",
+    "32": "leyeco3.png",
+    "48": "leyeco3.png",
+    "128": "leyeco3.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  }
+}
