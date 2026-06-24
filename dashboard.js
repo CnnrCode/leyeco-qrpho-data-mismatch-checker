@@ -1219,11 +1219,6 @@ const APPS_SCRIPT_CODE = `function doPost(e) {
 }`;
 
 const scriptCodeTextarea = document.getElementById('scriptCodeTextarea');
-const sheetsSettingsCloseBtn = document.getElementById('sheetsSettingsCloseBtn');
-const sheetsAppUrlInput = document.getElementById('sheetsAppUrl');
-const sheetsTabNameInput = document.getElementById('sheetsTabName');
-const btnSaveSheetsSettings = document.getElementById('btnSaveSheetsSettings');
-const btnCopyScriptCode = document.getElementById('btnCopyScriptCode');
 
 // Helper to get configured Sheets settings
 function getSheetsSettings() {
