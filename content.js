@@ -67,6 +67,24 @@ function detectPageType() {
   return null;
 }
 
+// Helper to extract the actual image source (filtering out icons like show-selfie.png)
+function getActualImgSrc(container) {
+  if (!container) return null;
+  const imgs = Array.from(container.querySelectorAll("img"));
+  if (imgs.length === 0) return null;
+  
+  // Find an image that is NOT marked as an icon and doesn't contain "selfie" in its src
+  const realImg = imgs.find(img => {
+    const src = (img.getAttribute("src") || "").toLowerCase();
+    const isIcon = img.getAttribute("data-icon") === "true" || 
+                   src.includes("show-selfie") || 
+                   src.includes("selfie-icon");
+    return !isIcon;
+  });
+  
+  return realImg ? realImg.src : null;
+}
+
 // Helper to build robust header mapping with colspans and rowspans
 function getHeaderMatrix(table) {
   // Select all rows containing header cells inside the table (both under thead or directly under table)
@@ -231,11 +249,8 @@ function scrapeLeyeco() {
         const timeMatch = text.match(/(\d{2}:\d{2}:\d{2})/);
         if (!timeMatch) return null;
 
-        let imgSrc = null;
-        const img = cell.querySelector("img");
-        if (img) {
-          imgSrc = img.src;
-        } else {
+        let imgSrc = getActualImgSrc(cell);
+        if (!imgSrc) {
           const icon = cell.querySelector("i.wp-menu-image");
           if (icon) {
             imgSrc = "placeholder_avatar";
@@ -246,7 +261,7 @@ function scrapeLeyeco() {
           slot: slotName,
           time: timeMatch[1],
           photo: imgSrc,
-          hasPhoto: !!imgSrc && !imgSrc.includes("placeholder") && !imgSrc.includes("avatar")
+          hasPhoto: !!imgSrc && !imgSrc.includes("placeholder") && !imgSrc.includes("avatar") && !imgSrc.includes("selfie")
         };
       };
 
@@ -464,9 +479,10 @@ function scrapeQrpho() {
         let imgSrc = null;
         const imgCell = imgCells[i];
         if (imgCell) {
-          const img = imgCell.querySelector("img");
-          if (img) imgSrc = img.src;
-          else if (imgCell.querySelector("i.wp-menu-image")) imgSrc = "placeholder_avatar";
+          imgSrc = getActualImgSrc(imgCell);
+          if (!imgSrc && imgCell.querySelector("i.wp-menu-image")) {
+            imgSrc = "placeholder_avatar";
+          }
         }
 
         const latMatch = text.match(/Lat:\s*([-\d.]+)/i);
@@ -476,7 +492,7 @@ function scrapeQrpho() {
           slot: SLOT_NAMES[i] || `Slot ${i + 1}`,
           time: timeMatch[1],
           photo: imgSrc,
-          hasPhoto: !!imgSrc && !imgSrc.includes("placeholder") && !imgSrc.includes("avatar"),
+          hasPhoto: !!imgSrc && !imgSrc.includes("placeholder") && !imgSrc.includes("avatar") && !imgSrc.includes("selfie"),
           lat: latMatch ? latMatch[1] : "",
           lon: lonMatch ? lonMatch[1] : ""
         });
@@ -524,9 +540,10 @@ function scrapeQrpho() {
         if (!timeMatch) return null;
         let imgSrc = null;
         if (imgCell) {
-          const img = imgCell.querySelector("img");
-          if (img) imgSrc = img.src;
-          else if (imgCell.querySelector("i.wp-menu-image")) imgSrc = "placeholder_avatar";
+          imgSrc = getActualImgSrc(imgCell);
+          if (!imgSrc && imgCell.querySelector("i.wp-menu-image")) {
+            imgSrc = "placeholder_avatar";
+          }
         }
         const latMatch = text.match(/Lat:\s*([-\d.]+)/i);
         const lonMatch = text.match(/Lon:\s*([-\d.]+)/i);
@@ -534,7 +551,7 @@ function scrapeQrpho() {
           slot: slotName,
           time: timeMatch[1],
           photo: imgSrc,
-          hasPhoto: !!imgSrc && !imgSrc.includes("placeholder") && !imgSrc.includes("avatar"),
+          hasPhoto: !!imgSrc && !imgSrc.includes("placeholder") && !imgSrc.includes("avatar") && !imgSrc.includes("selfie"),
           lat: latMatch ? latMatch[1] : "",
           lon: lonMatch ? lonMatch[1] : ""
         };
