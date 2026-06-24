@@ -42,13 +42,19 @@
                 </div>
             </div>
 
-            <!-- Compare Action Button & Extract Button -->
+            <!-- Compare Action Button & Extract Button & Sync Buttons -->
             <div style="display: flex; gap: 8px; align-items: center;">
+                <button id="sheetsSettingsBtn" class="btn-sheets-settings" title="Configure Google Sheets integration">
+                    <span>Sheets Settings</span> ⚙️
+                </button>
                 <button id="compareBtn" class="btn-compare">
                     <span>Compare Logs</span> ⚡
                 </button>
                 <button id="extractBtn" class="btn-extract">
                     <span>Extract Excel Data</span> 📋
+                </button>
+                <button id="syncSheetBtn" class="btn-sync-sheet" title="Sync report details to Google Sheet">
+                    <span>Sync to Sheet</span> 🚀
                 </button>
             </div>
         </div>
@@ -229,6 +235,59 @@
                 <img id="singlePhotoImg" src="" alt="Zoomed Photo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
             </div>
             <div style="margin-top: 15px; font-size: 13px; color: var(--text-secondary);" id="singlePhotoDetails"></div>
+        </div>
+    </div>
+
+    <!-- Google Sheets Sync Configuration Modal -->
+    <div class="lightbox-modal" id="sheetsSettingsModal">
+        <div class="lightbox-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+            <button class="lightbox-close" id="sheetsSettingsCloseBtn" title="Close Window">✕</button>
+            <div class="lightbox-header">
+                <h3 class="lightbox-title">Google Sheets Sync Configuration 📊</h3>
+                <p class="lightbox-subtitle">Connect this matcher dashboard directly to your spreadsheet</p>
+            </div>
+
+            <!-- Setup Instructions -->
+            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 10px; padding: 16px; margin-bottom: 20px; font-size: 12px; line-height: 1.5;">
+                <h4 style="color: var(--text-main); font-weight: 600; margin-bottom: 8px; font-size: 13px;">🛠️ Easy 1-Minute Setup Guide</h4>
+                <ol style="margin-left: 20px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px;">
+                    <li>Open your Google Sheet (e.g. <strong>"Payroll To Fill"</strong>).</li>
+                    <li>Go to the menu: <strong>Extensions</strong> &rarr; <strong>Apps Script</strong>.</li>
+                    <li>Delete any code in the editor, and paste the code snippet below.</li>
+                    <li>Click <strong>Deploy</strong> (top-right) &rarr; <strong>New deployment</strong>.</li>
+                    <li>Click the ⚙️ gear icon and choose <strong>Web app</strong>.</li>
+                    <li>Set <strong>Execute as</strong> to <strong>"Me"</strong>, and <strong>Who has access</strong> to <strong>"Anyone"</strong>.</li>
+                    <li>Click <strong>Deploy</strong>, authorize permissions, and copy the generated <strong>Web App URL</strong>.</li>
+                </ol>
+            </div>
+
+            <!-- Apps Script Textarea -->
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Google Apps Script Code</label>
+                    <button class="row-action-btn" id="btnCopyScriptCode" style="font-size: 10px; padding: 3px 8px;">Copy Script Code 📋</button>
+                </div>
+                <textarea id="scriptCodeTextarea" readonly style="width: 100%; height: 160px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; color: var(--text-main); font-family: monospace; font-size: 10px; white-space: pre; overflow: auto; resize: none; outline: none;"></textarea>
+            </div>
+
+            <!-- Form Fields -->
+            <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px;">
+                <div class="input-wrapper" style="width: 100%;">
+                    <label for="sheetsAppUrl" style="font-size: 11.5px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block;">Google Sheets Web App URL</label>
+                    <input type="text" id="sheetsAppUrl" class="url-input" placeholder="Paste script.google.com Web App URL here..." style="width: 100%; padding: 10px 14px;">
+                </div>
+                
+                <div class="input-wrapper" style="width: 100%;">
+                    <label for="sheetsTabName" style="font-size: 11.5px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block;">Sheet Tab Name (Optional)</label>
+                    <input type="text" id="sheetsTabName" class="url-input" placeholder="e.g. Copy of Leyeco Attendance (Leave blank to use active sheet)" style="width: 100%; padding: 10px 14px;">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn-compare" id="btnSaveSheetsSettings" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
+                    Save Configuration
+                </button>
+            </div>
         </div>
     </div>
 

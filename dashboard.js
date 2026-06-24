@@ -31,6 +31,16 @@ const tableContainer = document.getElementById('tableContainer');
 const comparisonTableBody = document.getElementById('comparisonTableBody');
 const comparisonSummaryBadge = document.getElementById('comparisonSummaryBadge');
 
+// Google Sheets Sync DOM Elements
+const sheetsSettingsModal = document.getElementById('sheetsSettingsModal');
+const sheetsSettingsBtn = document.getElementById('sheetsSettingsBtn');
+const sheetsSettingsCloseBtn = document.getElementById('sheetsSettingsCloseBtn');
+const sheetsAppUrlInput = document.getElementById('sheetsAppUrl');
+const sheetsTabNameInput = document.getElementById('sheetsTabName');
+const btnSaveSheetsSettings = document.getElementById('btnSaveSheetsSettings');
+const btnCopyScriptCode = document.getElementById('btnCopyScriptCode');
+const syncSheetBtn = document.getElementById('syncSheetBtn');
+
 // Summary Metric Elements
 const statMatchRate = document.getElementById('statMatchRate');
 const statMatchRateDesc = document.getElementById('statMatchRateDesc');
@@ -102,6 +112,7 @@ function startComparison() {
     state.scrapingActive = true;
     
     extractBtn.style.display = 'none';
+    syncSheetBtn.style.display = 'none';
     compareBtn.disabled = true;
     compareBtn.innerHTML = `Scanning... <span class="btn-spinner" style="display:inline-block; animation: spin-pulse 1s infinite linear;">🔄</span>`;
 
@@ -529,6 +540,7 @@ function processComparison() {
     summaryContainer.style.display = 'grid';
     tableContainer.style.display = 'block';
     extractBtn.style.display = 'flex';
+    syncSheetBtn.style.display = 'flex';
 
     // Populate debug panel
     const debugDetails = document.getElementById('debugDetails');
@@ -1102,3 +1114,402 @@ function showToast(message) {
         }, 300);
     }, 3000);
 }
+
+// ── Google Sheets Sync Modal & Logic ─────────────────────────────────────────
+const APPS_SCRIPT_CODE = `function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const sheetName = data.sheetName || "";
+    const employeeName = data.employeeName;
+    const month = data.month;
+    const attendanceVal = data.attendance || "";
+    const remarksVal = data.remarks || "";
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet;
+    if (sheetName) {
+      sheet = ss.getSheetByName(sheetName);
+    } else {
+      sheet = ss.getActiveSheet();
+    }
+    
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        message: "Sheet not found: " + sheetName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const rows = sheet.getDataRange().getValues();
+    if (rows.length === 0) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        message: "Sheet is empty"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 1. Find the employee row in Column A
+    let employeeRowIndex = -1;
+    const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, "").trim();
+    const targetCleanName = cleanName(employeeName);
+
+    for (let i = 0; i < rows.length; i++) {
+      const rowName = String(rows[i][0] || "");
+      if (cleanName(rowName) === targetCleanName) {
+        employeeRowIndex = i + 1; // 1-indexed row
+        break;
+      }
+    }
+
+    if (employeeRowIndex === -1) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        message: "Employee '" + employeeName + "' not found in Column A."
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 2. Find the column indexes for the specified month
+    const headers = rows[0];
+    let attendanceColIndex = -1;
+    const monthShort = month.substring(0, 3).toLowerCase();
+    
+    for (let j = 0; j < headers.length; j++) {
+      const headerText = String(headers[j] || "").toLowerCase();
+      if (headerText.includes(monthShort) && headerText.includes("attendance")) {
+        attendanceColIndex = j + 1;
+        break;
+      }
+    }
+
+    // Fallback search
+    if (attendanceColIndex === -1) {
+      for (let j = 0; j < headers.length; j++) {
+        const headerText = String(headers[j] || "").toLowerCase();
+        if (headerText.includes(monthShort)) {
+          attendanceColIndex = j + 1;
+          break;
+        }
+      }
+    }
+
+    if (attendanceColIndex === -1) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        message: "Could not find column for month: " + month
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const remarksColIndex = attendanceColIndex + 1;
+
+    // 3. Write data to the cells
+    sheet.getRange(employeeRowIndex, attendanceColIndex).setValue(attendanceVal);
+    sheet.getRange(employeeRowIndex, remarksColIndex).setValue(remarksVal);
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      message: "Successfully updated " + employeeName + " on row " + employeeRowIndex + " for " + month
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+
+const scriptCodeTextarea = document.getElementById('scriptCodeTextarea');
+const sheetsSettingsCloseBtn = document.getElementById('sheetsSettingsCloseBtn');
+const sheetsAppUrlInput = document.getElementById('sheetsAppUrl');
+const sheetsTabNameInput = document.getElementById('sheetsTabName');
+const btnSaveSheetsSettings = document.getElementById('btnSaveSheetsSettings');
+const btnCopyScriptCode = document.getElementById('btnCopyScriptCode');
+
+// Helper to get configured Sheets settings
+function getSheetsSettings() {
+    return {
+        url: localStorage.getItem('googleSheetsUrl') || '',
+        tabName: localStorage.getItem('googleSheetsTabName') || ''
+    };
+}
+
+// Open Google Sheets Settings Modal
+function openSheetsSettingsModal() {
+    const settings = getSheetsSettings();
+    sheetsAppUrlInput.value = settings.url;
+    sheetsTabNameInput.value = settings.tabName;
+    scriptCodeTextarea.value = APPS_SCRIPT_CODE;
+    sheetsSettingsModal.classList.add('active');
+}
+
+// Close Google Sheets Settings Modal
+function closeSheetsSettingsModal() {
+    sheetsSettingsModal.classList.remove('active');
+}
+
+sheetsSettingsBtn.addEventListener('click', openSheetsSettingsModal);
+sheetsSettingsCloseBtn.addEventListener('click', closeSheetsSettingsModal);
+sheetsSettingsModal.addEventListener('click', (e) => {
+    if (e.target === sheetsSettingsModal) {
+        closeSheetsSettingsModal();
+    }
+});
+
+btnSaveSheetsSettings.addEventListener('click', () => {
+    const url = sheetsAppUrlInput.value.trim();
+    const tabName = sheetsTabNameInput.value.trim();
+    
+    if (url && !url.startsWith('https://script.google.com/')) {
+        alert('Invalid Web App URL. It should start with https://script.google.com/');
+        return;
+    }
+    
+    localStorage.setItem('googleSheetsUrl', url);
+    localStorage.setItem('googleSheetsTabName', tabName);
+    
+    showToast('Google Sheets settings saved successfully!');
+    closeSheetsSettingsModal();
+});
+
+btnCopyScriptCode.addEventListener('click', () => {
+    scriptCodeTextarea.select();
+    navigator.clipboard.writeText(scriptCodeTextarea.value).then(() => {
+        const originalText = btnCopyScriptCode.innerHTML;
+        btnCopyScriptCode.innerHTML = 'Copied! ✓';
+        setTimeout(() => {
+            btnCopyScriptCode.innerHTML = originalText;
+        }, 2000);
+    });
+});
+
+function triggerSheetsSync() {
+    const settings = getSheetsSettings();
+    if (!settings.url) {
+        showToast('Please configure your Google Sheets Web App URL first.');
+        openSheetsSettingsModal();
+        return;
+    }
+
+    if (!state.leyecoData && !state.qrphoData) {
+        showToast('No comparison data available to sync.');
+        return;
+    }
+
+    // Get the employee name
+    const rawEmployeeName = (state.qrphoData && state.qrphoData.employeeName) || 
+                            (state.leyecoData && state.leyecoData.employeeName) || 
+                            '';
+    const employeeName = cleanEmployeeName(rawEmployeeName);
+    if (!employeeName) {
+        showToast('Could not resolve employee name for sync.');
+        return;
+    }
+
+    // Identify month and mismatches
+    const leyecoRecords = state.leyecoData ? state.leyecoData.records || [] : [];
+    const qrphoRecords = state.qrphoData ? state.qrphoData.records || [] : [];
+
+    const leyecoMap = {};
+    leyecoRecords.forEach(rec => {
+        if (!rec.date) return;
+        if (!leyecoMap[rec.date]) {
+            leyecoMap[rec.date] = { logs: [], payroll: rec.payroll || {} };
+        }
+        if (rec.logs) leyecoMap[rec.date].logs.push(...rec.logs);
+        if (rec.payroll) {
+            for (const k of Object.keys(rec.payroll)) {
+                if (!leyecoMap[rec.date].payroll[k] && rec.payroll[k]) {
+                    leyecoMap[rec.date].payroll[k] = rec.payroll[k];
+                }
+            }
+        }
+    });
+
+    const qrphoMap = {};
+    qrphoRecords.forEach(rec => {
+        if (!rec.date) return;
+        if (!qrphoMap[rec.date]) {
+            qrphoMap[rec.date] = { logs: [], payroll: rec.payroll || {} };
+        }
+        if (rec.logs) qrphoMap[rec.date].logs.push(...rec.logs);
+        if (rec.payroll) {
+            for (const k of Object.keys(rec.payroll)) {
+                if (!qrphoMap[rec.date].payroll[k] && rec.payroll[k]) {
+                    qrphoMap[rec.date].payroll[k] = rec.payroll[k];
+                }
+            }
+        }
+    });
+
+    const datesSet = new Set([
+        ...Object.keys(leyecoMap),
+        ...Object.keys(qrphoMap)
+    ]);
+    const sortedDates = Array.from(datesSet).sort();
+
+    if (sortedDates.length === 0) {
+        showToast('No dates found in the compared attendance records.');
+        return;
+    }
+
+    // 1. Detect Month
+    const firstDateObj = new Date(sortedDates[0]);
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const month = months[firstDateObj.getMonth()];
+
+    // 2. Identify Mismatches
+    const mismatchDates = new Set();
+    const mismatchDetails = [];
+
+    sortedDates.forEach(date => {
+        const leyecoRec = leyecoMap[date];
+        const qrphoRec = qrphoMap[date];
+
+        const hasLeyecoLogs = leyecoRec && leyecoRec.logs && leyecoRec.logs.length > 0;
+        const hasQrphoLogs = qrphoRec && qrphoRec.logs && qrphoRec.logs.length > 0;
+
+        if (!hasLeyecoLogs && !hasQrphoLogs) return;
+
+        let isMismatch = false;
+        let dateMismatchesList = [];
+
+        // Check slots
+        const slots = ['AM In', 'AM Out', 'PM In', 'PM Out'];
+        slots.forEach(slotName => {
+            const lLogs = leyecoRec && leyecoRec.logs ? leyecoRec.logs.filter(l => l.slot === slotName) : [];
+            const qLogs = qrphoRec && qrphoRec.logs ? qrphoRec.logs.filter(l => l.slot === slotName) : [];
+
+            const matchedQIndices = new Set();
+
+            lLogs.forEach(lLog => {
+                let bestQLog = null;
+                let bestQIndex = -1;
+                let minDiff = Infinity;
+
+                qLogs.forEach((qLog, idx) => {
+                    if (matchedQIndices.has(idx)) return;
+                    const diff = getTimeDifferenceSeconds(lLog.time, qLog.time);
+                    if (diff !== null && diff < minDiff) {
+                        minDiff = diff;
+                        bestQLog = qLog;
+                        bestQIndex = idx;
+                    }
+                });
+
+                if (bestQLog) {
+                    matchedQIndices.add(bestQIndex);
+                    if (minDiff > 120) {
+                        isMismatch = true;
+                        dateMismatchesList.push(`${slotName} Time Drift`);
+                    }
+                } else {
+                    isMismatch = true;
+                    dateMismatchesList.push(`Missing QRpho ${slotName}`);
+                }
+            });
+
+            qLogs.forEach((qLog, idx) => {
+                if (!matchedQIndices.has(idx)) {
+                    isMismatch = true;
+                    dateMismatchesList.push(`Missing Leyeco ${slotName}`);
+                }
+            });
+        });
+
+        // Check payroll hours mismatch
+        const PAYROLL_LABELS = [
+            { key: 'totalWorkHours',    label: 'Total Work Hrs' },
+            { key: 'officeHours',       label: 'Office Hrs' },
+            { key: 'overtimeHours',     label: 'Overtime' },
+            { key: 'holidayCredit',     label: 'Holiday Credit' },
+            { key: 'leaveCredit',       label: 'Leave Credit' },
+            { key: 'totalPayrollHours', label: 'Total Payroll Hrs' },
+            { key: 'undertime',         label: 'Undertime' },
+        ];
+
+        const lPay = (leyecoRec && leyecoRec.payroll) ? leyecoRec.payroll : {};
+        const qPay = (qrphoRec  && qrphoRec.payroll)  ? qrphoRec.payroll  : {};
+        const isEmpty = v => !v || v === '00:00:00' || v === '0';
+
+        const payrollMismatches = PAYROLL_LABELS.filter(field => {
+            const lVal = (lPay[field.key] || '').replace(/\s+/g, ' ').trim();
+            const qVal = (qPay[field.key] || '').replace(/\s+/g, ' ').trim();
+            const lEmpty = isEmpty(lVal);
+            const qEmpty = isEmpty(qVal);
+            if (lEmpty && qEmpty) return false;
+            return lVal !== qVal;
+        });
+
+        if (payrollMismatches.length > 0) {
+            isMismatch = true;
+            payrollMismatches.forEach(m => {
+                dateMismatchesList.push(m.label);
+            });
+        }
+
+        if (isMismatch) {
+            mismatchDates.add(date);
+            const formattedDateStr = formatDateHuman(date); // e.g. "Jan 23, 2026"
+            const uniqueMismatches = Array.from(new Set(dateMismatchesList));
+            mismatchDetails.push(`${formattedDateStr} - ${uniqueMismatches.join(' & ')}`);
+        }
+    });
+
+    // Determine payload values
+    let attendanceVal = "";
+    let remarksVal = "";
+
+    if (mismatchDates.size === 0) {
+        attendanceVal = ""; // Keep attendance blank if perfect match
+        remarksVal = "Data Matched! No Signs Of Errors Found";
+    } else {
+        // Build the mismatches string (e.g. "Jan 23, 2026 - Total Payroll Hrs")
+        attendanceVal = mismatchDetails.join('\n');
+        remarksVal = `Data mismatch ${mismatchDetails.map(d => d.split(' - ')[1]).join(' & ')}`;
+        // Truncate/limit remarks to prevent overflow in cell and keep it similar to screenshot
+        if (remarksVal.length > 60) {
+            remarksVal = remarksVal.substring(0, 57) + '...';
+        }
+    }
+
+    // Show visual status on the sync button
+    const originalBtnHTML = syncSheetBtn.innerHTML;
+    syncSheetBtn.disabled = true;
+    syncSheetBtn.innerHTML = `Syncing... <span class="btn-spinner" style="display:inline-block; animation: spin-pulse 1s infinite linear;">🔄</span>`;
+
+    const payload = {
+        sheetName: settings.tabName,
+        employeeName: employeeName,
+        month: month,
+        attendance: attendanceVal,
+        remarks: remarksVal
+    };
+
+    fetch(settings.url, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+            'Content-Type': 'text/plain', // Avoid CORS preflight OPTIONS request
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(res => {
+        syncSheetBtn.disabled = false;
+        syncSheetBtn.innerHTML = originalBtnHTML;
+
+        if (res.status === 'success') {
+            showToast(`Synced successfully! Google Sheet updated.`);
+        } else {
+            alert(`Sync Failed: ${res.message}`);
+        }
+    })
+    .catch(err => {
+        syncSheetBtn.disabled = false;
+        syncSheetBtn.innerHTML = originalBtnHTML;
+        console.error('Google Sheet Sync Error:', err);
+        alert(`Google Sheet Sync Error: ${err.message || err}. Ensure you deployed the Google Web App script correctly as 'Anyone' and set execution as 'Me'.`);
+    });
+}
+
+syncSheetBtn.addEventListener('click', triggerSheetsSync);
