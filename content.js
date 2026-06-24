@@ -468,8 +468,6 @@ function scrapeQrpho() {
       const logs = [];
       for (let i = 0; i < timeCells.length; i++) {
         const timeCell = timeCells[i];
-        // Skip no-log cells
-        if (timeCell.classList.contains("no-log")) continue;
 
         const text = timeCell.textContent.trim();
         const timeMatch = text.match(/(\d{2}:\d{2}:\d{2})/);
